@@ -55,13 +55,17 @@ func RunDownload(ctx context.Context, pageStr, sizeStr, outputBase string, onLog
 	}
 
 	uniquePosts := uniqueStrings(postURLs)
-	onLog(fmt.Sprintf("找到 %d 个帖子（去重后）", len(uniquePosts)))
+	if len(uniquePosts) != len(postURLs) {
+		onLog(fmt.Sprintf("去重: %d → %d 个帖子", len(postURLs), len(uniquePosts)))
+	}
 
 	var allImages []imageTask
 	var postMu sync.Mutex
 	var postWg sync.WaitGroup
 	postSem := make(chan struct{}, 5)
+	onLog(fmt.Sprintf("开始爬取 %d 个帖子页面...", len(uniquePosts)))
 
+	var scraped int
 	for _, postURL := range uniquePosts {
 		postWg.Add(1)
 		postSem <- struct{}{}
@@ -84,6 +88,11 @@ func RunDownload(ctx context.Context, pageStr, sizeStr, outputBase string, onLog
 				})
 			}
 			postMu.Unlock()
+
+			scraped++
+			if scraped%10 == 0 || scraped == len(uniquePosts) {
+				onLog(fmt.Sprintf("帖子爬取进度: %d/%d", scraped, len(uniquePosts)))
+			}
 		}(postURL)
 	}
 
@@ -197,14 +206,8 @@ func scrapeGridPage(ctx context.Context, page, size int, onLog func(string)) []s
 		return nil
 	}
 
-	gridItems := doc.Find(".grid-item")
-	onLog(fmt.Sprintf("找到 %d 个 .grid-item", gridItems.Length()))
-	if gridItems.Length() == 0 {
-		onLog("提示: 未找到 .grid-item，页面结构可能已变更")
-	}
-
 	var urls []string
-	gridItems.Each(func(i int, s *goquery.Selection) {
+	doc.Find(".grid-item").Each(func(i int, s *goquery.Selection) {
 		link := s.Find("a").First()
 		href, exists := link.Attr("href")
 		if exists && strings.Contains(href, "/post/") {
