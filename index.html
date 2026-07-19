@@ -2,481 +2,79 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>16K 图片下载</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            background: #e6e4dc;
-            font-family: 'Courier New', 'Lucida Console', monospace;
-            padding: 24px 20px;
-            display: flex;
-            justify-content: center;
-            color: #1e1e1e;
-        }
-
-        .app {
-            max-width: 820px;
-            width: 100%;
-            background: #f4f1e9;
-            border: 2px solid #1a1a1a;
-            padding: 18px 18px 16px 18px;
-            box-shadow: 6px 6px 0 #1a1a1a;
-        }
-
-        .topbar {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            border-bottom: 2px solid #1a1a1a;
-            padding-bottom: 8px;
-            margin-bottom: 18px;
-            flex-wrap: wrap;
-            gap: 8px;
-        }
-
-        .topbar .title {
-            font-size: 22px;
-            font-weight: 700;
-            background: #d9d2c0;
-            padding: 2px 16px 4px 16px;
-            border: 2px solid #1a1a1a;
-            letter-spacing: -0.5px;
-            display: inline-block;
-        }
-
-        .topbar .sub {
-            font-size: 13px;
-            background: #c4bca8;
-            padding: 2px 12px;
-            border: 1px solid #1a1a1a;
-            display: inline-block;
-        }
-
-        .topbar .sub a {
-            color: #1a1a1a;
-            text-decoration: none;
-        }
-
-        .topbar .sub a:hover {
-            background: #bdb39b;
-        }
-
-        .row {
-            display: flex;
-            gap: 18px;
-            flex-wrap: wrap;
-        }
-
-        .col-left {
-            flex: 2;
-            min-width: 260px;
-        }
-
-        .col-right {
-            flex: 1.2;
-            min-width: 180px;
-        }
-
-        .card {
-            background: #f3f0e6;
-            border: 2px solid #1a1a1a;
-            padding: 14px 14px 12px 14px;
-            margin-bottom: 14px;
-        }
-
-        .card-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            border-bottom: 2px dashed #2a2a2a;
-            padding-bottom: 6px;
-            margin-bottom: 12px;
-        }
-
-        .card-header h3 {
-            font-size: 15px;
-            font-weight: 600;
-            background: #d9d2c0;
-            padding: 0 10px;
-            border: 1px solid #1a1a1a;
-            line-height: 1.6;
-        }
-
-        .card-header .badge {
-            font-size: 11px;
-            background: #bdb39b;
-            padding: 0 8px;
-            border: 1px solid #1a1a1a;
-        }
-
-        .form-group {
-            margin-bottom: 10px;
-        }
-
-        .form-group label {
-            display: block;
-            font-size: 12px;
-            font-weight: 600;
-            background: #d9d2c0;
-            padding: 0 8px;
-            border: 1px solid #1a1a1a;
-            width: fit-content;
-            margin-bottom: 3px;
-        }
-
-        .form-group input,
-        .form-group select {
-            width: 100%;
-            padding: 6px 10px;
-            background: #faf8f2;
-            border: 2px solid #1a1a1a;
-            font-family: 'Courier New', monospace;
-            font-size: 14px;
-            color: #1e1e1e;
-        }
-
-        .form-group input:focus,
-        .form-group select:focus {
-            outline: none;
-            background: #fffcf5;
-        }
-
-        .form-row {
-            display: flex;
-            gap: 12px;
-            flex-wrap: wrap;
-        }
-
-        .form-row .form-group {
-            flex: 1;
-            min-width: 80px;
-        }
-
-        .btn {
-            display: inline-block;
-            padding: 8px 18px;
-            font-family: 'Courier New', monospace;
-            font-size: 15px;
-            font-weight: 700;
-            border: 2px solid #1a1a1a;
-            background: #d0c8b8;
-            color: #1a1a1a;
-            cursor: pointer;
-            box-shadow: 3px 3px 0 #1a1a1a;
-            transition: 0.05s linear;
-            text-align: center;
-            width: 100%;
-        }
-
-        .btn-primary {
-            background: #b3c7a5;
-        }
-
-        .btn-secondary {
-            background: #c4c0b0;
-        }
-
-        .btn:hover:not(:disabled) {
-            transform: translate(2px, 2px);
-            box-shadow: 1px 1px 0 #1a1a1a;
-        }
-
-        .btn:disabled {
-            opacity: 0.45;
-            transform: translate(2px, 2px);
-            box-shadow: 1px 1px 0 #1a1a1a;
-            cursor: default;
-            pointer-events: none;
-        }
-
-        .btn:active:not(:disabled) {
-            transform: translate(4px, 4px);
-            box-shadow: none;
-        }
-
-        .progress-wrap {
-            margin-top: 12px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            border-top: 2px dotted #2a2a2a;
-            padding-top: 12px;
-        }
-
-        .progress-bar {
-            flex: 1;
-            height: 14px;
-            background: #d9d2c0;
-            border: 2px solid #1a1a1a;
-        }
-
-        .progress-fill {
-            height: 100%;
-            width: 0%;
-            background: #6d8a6d;
-            border-right: 2px solid #1a1a1a;
-            transition: width 0.2s steps(3);
-        }
-
-        .progress-text {
-            font-size: 14px;
-            font-weight: 600;
-            background: #d9d2c0;
-            padding: 0 10px;
-            border: 2px solid #1a1a1a;
-            min-width: 65px;
-            text-align: center;
-        }
-
-        .log-container {
-            background: #1a1a1a;
-            border: 2px solid #2a2a2a;
-            padding: 3px;
-            margin-top: 6px;
-        }
-
-        #log {
-            background: #141414;
-            color: #b8c8b0;
-            padding: 10px 12px;
-            height: 280px;
-            overflow-y: auto;
-            font-family: 'Courier New', monospace;
-            font-size: 12px;
-            line-height: 1.7;
-            border: 1px solid #2a2a2a;
-        }
-
-        #log::-webkit-scrollbar {
-            width: 5px;
-            background: #2a2a2a;
-        }
-
-        #log::-webkit-scrollbar-thumb {
-            background: #4a4a4a;
-            border: 1px solid #2a2a2a;
-        }
-
-        .log-line {
-            margin: 0;
-            padding: 1px 0;
-            white-space: pre-wrap;
-            word-break: break-word;
-            border-bottom: 1px dotted #2a2a2a;
-        }
-
-        .log-line:last-child {
-            border-bottom: none;
-        }
-
-        .log-success { color: #9bba8a; }
-        .log-skip { color: #c4b88a; }
-        .log-error { color: #c87a7a; }
-        .log-info { color: #7aadc8; }
-        .log-divider { color: #5a5a5a; }
-
-        .hidden { display: none; }
-    </style>
+    <title>16K Downloader</title>
 </head>
 <body>
-    <div class="app">
-        <div class="topbar">
-            <div class="title">16K Downloader</div>
-            <div class="sub">16k.club 图片下载工具 v0.1</div>
-        </div>
+    <h1>16K Downloader</h1>
 
-        <div class="row">
-            <div class="col-left">
-                <div class="card">
-                    <div class="card-header">
-                        <h3>一键下载</h3>
-                        <span class="badge">AUTO</span>
-                    </div>
-                    <button class="btn btn-primary" id="btnAuto" onclick="startDownload('auto')">Start</button>
-                    <div class="progress-wrap hidden" id="progressAuto">
-                        <div class="progress-bar"><div class="progress-fill" id="barAuto"></div></div>
-                        <div class="progress-text" id="txtAuto">0/0</div>
-                    </div>
-                </div>
+    <h2>Auto</h2>
+    <button id="btnAuto" onclick="start('auto')">Start</button>
+    <div id="progAuto"></div>
 
-                <div class="card">
-                    <div class="card-header">
-                        <h3>指定页面</h3>
-                        <span class="badge">CUSTOM</span>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>Page</label>
-                            <input type="number" id="page" value="1" min="1">
-                        </div>
-                        <div class="form-group">
-                            <label>Size</label>
-                            <input type="number" id="size" value="50" min="1" max="200">
-                        </div>
-                    </div>
-                    <button class="btn btn-secondary" id="btnCustom" onclick="startDownload('custom')">Start</button>
-                    <div class="progress-wrap hidden" id="progressCustom">
-                        <div class="progress-bar"><div class="progress-fill" id="barCustom"></div></div>
-                        <div class="progress-text" id="txtCustom">0/0</div>
-                    </div>
-                </div>
-            </div>
+    <h2>Custom</h2>
+    <label>Page <input type="number" id="page" value="1" min="1"></label><br>
+    <label>Size <input type="number" id="size" value="50" min="1" max="200"></label><br>
+    <button id="btnCustom" onclick="start('custom')">Start</button>
+    <div id="progCustom"></div>
 
-            <div class="col-right">
-                <div class="card">
-                    <div class="card-header">
-                        <h3>Output</h3>
-                        <span class="badge" id="badgeTotal">--</span>
-                    </div>
-                    <div class="form-group">
-                        <label>Directory</label>
-                        <input type="text" id="outputDir" value="data/images" readonly>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>Success</label>
-                            <input type="text" id="countOk" value="0" readonly>
-                        </div>
-                        <div class="form-group">
-                            <label>Skip</label>
-                            <input type="text" id="countSkip" value="0" readonly>
-                        </div>
-                        <div class="form-group">
-                            <label>Fail</label>
-                            <input type="text" id="countFail" value="0" readonly>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+    <h2>Stats</h2>
+    <div id="stats"></div>
 
-        <div class="card">
-            <div class="card-header">
-                <h3>Log</h3>
-                <span class="badge" id="badgeStatus">IDLE</span>
-            </div>
-            <div class="log-container">
-                <div id="log"></div>
-            </div>
-        </div>
-    </div>
+    <h2>Log</h2>
+    <pre id="log"></pre>
 
     <script>
-        let es, totalCount = 0, currentMode = '';
+        let es, mode = '', total = 0;
 
-        function connectEvents() {
+        function connect() {
             if (es) es.close();
             es = new EventSource('/events');
             es.onmessage = (e) => {
-                const log = document.getElementById('log');
-                const line = document.createElement('div');
-                line.className = 'log-line';
-                line.textContent = e.data;
-
-                if (e.data.includes('__TOTAL__:')) {
-                    totalCount = parseInt(e.data.split(':')[1]);
-                    document.getElementById('badgeTotal').textContent = totalCount;
+                const line = e.data;
+                if (line.includes('__TOTAL__:')) {
+                    total = parseInt(line.split(':')[1]);
                     return;
                 }
-
-                if (e.data.includes('__PROGRESS__:')) {
-                    const parts = e.data.split(':')[1].split('/');
-                    const done = parseInt(parts[0]);
-                    const total = parseInt(parts[1]);
-                    if (total > 0) {
-                        const pct = Math.min(100, Math.round(done / total * 100));
-                        const bar = currentMode === 'auto' ? document.getElementById('barAuto') : document.getElementById('barCustom');
-                        const txt = currentMode === 'auto' ? document.getElementById('txtAuto') : document.getElementById('txtCustom');
-                        if (bar) bar.style.width = pct + '%';
-                        if (txt) txt.textContent = done + ' / ' + total;
-                        if (done >= total) {
-                            setTimeout(resetButtons, 1500);
-                        }
-                    }
+                if (line.includes('__PROGRESS__:')) {
+                    const [d, t] = line.split(':')[1].split('/');
+                    const pct = t > 0 ? Math.round(d / t * 100) : 0;
+                    const id = mode === 'auto' ? 'progAuto' : 'progCustom';
+                    document.getElementById(id).textContent = d + '/' + t + ' (' + pct + '%)';
+                    if (d >= t) setTimeout(reset, 1500);
                     return;
                 }
-
-                if (e.data.includes('__STAT__:')) {
-                    const parts = e.data.split(':')[1].split('/');
-                    document.getElementById('countOk').value = parts[0];
-                    document.getElementById('countSkip').value = parts[1];
-                    document.getElementById('countFail').value = parts[2];
+                if (line.includes('__STAT__:')) {
+                    const [ok, skip, fail] = line.split(':')[1].split('/');
+                    document.getElementById('stats').innerHTML =
+                        'OK: ' + ok + ' | Skip: ' + skip + ' | Fail: ' + fail + ' | Total: ' + total;
                     return;
                 }
-
-                if (e.data.includes('--- 翻页')) line.classList.add('log-divider');
-                else if (e.data.includes('跳过')) line.classList.add('log-skip');
-                else if (e.data.includes('失败') || e.data.includes('错误')) line.classList.add('log-error');
-                else if (e.data.includes('完成') || e.data.includes('成功')) line.classList.add('log-success');
-                else if (e.data.includes('找到') || e.data.includes('访问') || e.data.includes('开始下载')) line.classList.add('log-info');
-
-                log.appendChild(line);
-                log.scrollTop = log.scrollHeight;
+                document.getElementById('log').textContent += line + '\n';
             };
-
-            es.onerror = () => {
-                document.getElementById('badgeStatus').textContent = 'RECONN';
-                setTimeout(connectEvents, 2000);
-            };
-
-            es.addEventListener('open', () => {
-                document.getElementById('badgeStatus').textContent = 'LIVE';
-            });
+            es.onerror = () => setTimeout(connect, 2000);
         }
 
-        function resetButtons() {
-            document.getElementById('progressAuto').classList.add('hidden');
-            document.getElementById('progressCustom').classList.add('hidden');
+        function reset() {
             document.getElementById('btnAuto').disabled = false;
             document.getElementById('btnCustom').disabled = false;
-            document.getElementById('badgeStatus').textContent = 'IDLE';
-            document.getElementById('countOk').value = '0';
-            document.getElementById('countSkip').value = '0';
-            document.getElementById('countFail').value = '0';
-            document.getElementById('badgeTotal').textContent = '--';
+            document.getElementById('progAuto').textContent = '';
+            document.getElementById('progCustom').textContent = '';
+            document.getElementById('stats').textContent = '';
         }
 
-        function setButtons(disabled) {
-            document.getElementById('btnAuto').disabled = disabled;
-            document.getElementById('btnCustom').disabled = disabled;
-            document.getElementById('badgeStatus').textContent = disabled ? 'WORK' : 'IDLE';
+        function setBtns(on) {
+            document.getElementById('btnAuto').disabled = on;
+            document.getElementById('btnCustom').disabled = on;
         }
 
-        async function startDownload(mode) {
-            setButtons(true);
-            currentMode = mode;
-            totalCount = 0;
-
-            const prog = mode === 'auto' ? 'progressAuto' : 'progressCustom';
-            const bar = mode === 'auto' ? 'barAuto' : 'barCustom';
-            const txt = mode === 'auto' ? 'txtAuto' : 'txtCustom';
-
-            document.getElementById(prog).classList.remove('hidden');
-            document.getElementById(bar).style.width = '0%';
-            document.getElementById(txt).textContent = '...';
-
-            let url = '/download?mode=' + mode;
-            if (mode === 'custom') {
-                url += '&page=' + encodeURIComponent(document.getElementById('page').value || '1');
-                url += '&size=' + encodeURIComponent(document.getElementById('size').value || '50');
-            }
-
-            try {
-                const resp = await fetch(url);
-                if (!resp.ok) throw new Error(resp.status);
-            } catch (e) {
-                console.error(e);
-                setButtons(false);
-            }
+        async function start(m) {
+            setBtns(true);
+            mode = m;
+            const url = '/download?mode=' + m + (m === 'custom' ? '&page=' + document.getElementById('page').value + '&size=' + document.getElementById('size').value : '');
+            try { await fetch(url); } catch(e) { setBtns(false); }
         }
 
-        connectEvents();
+        connect();
     </script>
 </body>
 </html>
