@@ -112,7 +112,7 @@ func RunDownload(ctx context.Context, pageStr, sizeStr, outputBase string, onLog
 		task.path = filepath.Join(outputBase, task.postID, task.filename)
 
 		if _, err := os.Stat(task.path); err == nil {
-			onLog(fmt.Sprintf("[%d/%d] 跳过: %s", i+1, totalImages, t.filename))
+			onLog(fmt.Sprintf("[%d/%d] 跳过: %s", i+1, totalImages, task.filename))
 			atomic.AddInt32(&counts[1], 1)
 			onProgress(totalImages, i+1)
 			onStats(int(atomic.LoadInt32(&counts[0])), int(atomic.LoadInt32(&counts[1])), int(atomic.LoadInt32(&counts[2])))
