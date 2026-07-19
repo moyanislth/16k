@@ -99,7 +99,10 @@ func RunDownload(ctx context.Context, pageStr, sizeStr, outputBase string, onLog
 
 	os.MkdirAll(outputBase, 0755)
 
-	const maxConc = 8
+	const (
+		maxConc  = 8
+		maxRetry = 3
+	)
 	var dlWg sync.WaitGroup
 	dlSem := make(chan struct{}, maxConc)
 	var counts [3]int
@@ -129,17 +132,33 @@ func RunDownload(ctx context.Context, pageStr, sizeStr, outputBase string, onLog
 				return
 			}
 
-			onLog(fmt.Sprintf("[%d/%d] 下载: %s", idx+1, totalImages, t.filename))
-			sizeBytes, err := downloadImage(allocCtx, t.url, t.path)
-			if err != nil {
-				onLog(fmt.Sprintf("[%d/%d] 失败: %s (%v)", idx+1, totalImages, t.filename, err))
-				counts[2]++
-				onProgress(totalImages, idx+1)
-				onStats(counts[0], counts[1], counts[2])
-				return
+			for attempt := 1; attempt <= maxRetry; attempt++ {
+				if ctx.Err() != nil {
+					onLog(fmt.Sprintf("[%d/%d] 中断: %s", idx+1, totalImages, t.filename))
+					counts[2]++
+					onProgress(totalImages, idx+1)
+					onStats(counts[0], counts[1], counts[2])
+					return
+				}
+
+				onLog(fmt.Sprintf("[%d/%d] 下载: %s (尝试 %d/%d)", idx+1, totalImages, t.filename, attempt, maxRetry))
+				sizeBytes, err := downloadImage(allocCtx, t.url, t.path)
+				if err == nil {
+					onLog(fmt.Sprintf("[%d/%d] 完成: %s (%.2f MB)", idx+1, totalImages, t.filename, float64(sizeBytes)/1024/1024))
+					counts[0]++
+					onProgress(totalImages, idx+1)
+					onStats(counts[0], counts[1], counts[2])
+					return
+				}
+
+				if attempt < maxRetry {
+					onLog(fmt.Sprintf("[%d/%d] 重试: %s (%v)", idx+1, totalImages, t.filename, err))
+					time.Sleep(1 * time.Second)
+				}
 			}
-			onLog(fmt.Sprintf("[%d/%d] 完成: %s (%.2f MB)", idx+1, totalImages, t.filename, float64(sizeBytes)/1024/1024))
-			counts[0]++
+
+			onLog(fmt.Sprintf("[%d/%d] 失败: %s (已重试 %d 次)", idx+1, totalImages, t.filename, maxRetry))
+			counts[2]++
 			onProgress(totalImages, idx+1)
 			onStats(counts[0], counts[1], counts[2])
 		}(i, task)

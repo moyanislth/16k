@@ -124,6 +124,9 @@ func (s *Server) handleDownload(w http.ResponseWriter, r *http.Request) {
 
 	go func() {
 		defer func() {
+			if r := recover(); r != nil {
+				s.addLog(fmt.Sprintf("运行时错误: %v", r))
+			}
 			s.notifyEnd()
 			cancel()
 			s.cancelMu.Lock()
@@ -155,6 +158,11 @@ func (s *Server) handleDownload(w http.ResponseWriter, r *http.Request) {
 				time.Sleep(2 * time.Second)
 			}
 		} else {
+			if ctx.Err() != nil {
+				s.addLog("下载已中断")
+				return
+			}
+			s.addLog(fmt.Sprintf("=== 开始下载: page=%s, size=%s ===", page, size))
 			RunDownload(ctx, page, size, s.outputBase, s.addLog, s.notifyTotal, s.notifyProgress, s.notifyStats)
 		}
 	}()
