@@ -22,5 +22,5 @@ go run .
 
 ```
 -port     服务端口（默认 8080）
--output   图片输出目录（默认 data/temp）
+-output   图片输出目录（默认 data/images）
 ```
