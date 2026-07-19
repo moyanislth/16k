@@ -145,13 +145,24 @@ func (s *Server) handleDownload(w http.ResponseWriter, r *http.Request) {
 					break
 				}
 				s.addLog(fmt.Sprintf("--- 翻页: page=%d ---", p))
-				done := make(chan int, 1)
-				go func(pageNum int) {
-					done <- RunDownload(ctx, fmt.Sprintf("%d", pageNum), size, s.outputBase, s.addLog, s.notifyTotal, s.notifyProgress, s.notifyStats)
-				}(p)
-				count := <-done
+
+				var count int
+				for attempt := 1; attempt <= 3; attempt++ {
+					if attempt > 1 {
+						s.addLog(fmt.Sprintf("重试翻页: page=%d (尝试 %d/3)", p, attempt))
+					}
+					done := make(chan int, 1)
+					go func(pageNum int) {
+						done <- RunDownload(ctx, fmt.Sprintf("%d", pageNum), size, s.outputBase, s.addLog, s.notifyTotal, s.notifyProgress, s.notifyStats)
+					}(p)
+					count = <-done
+					if count > 0 {
+						break
+					}
+				}
+
 				if count == 0 {
-					s.addLog("已到最后一页，下载结束")
+					s.addLog(fmt.Sprintf("page=%d 无数据，已到最后一页，下载结束", p))
 					break
 				}
 				p++
