@@ -64,6 +64,17 @@ func (s *Server) notifyProgress(total, current int) {
 	s.logMu.Unlock()
 }
 
+func (s *Server) notifyStats(ok, skip, fail int) {
+	s.logMu.Lock()
+	for _, ch := range s.logSubs {
+		select {
+		case ch <- fmt.Sprintf("__STAT__:%d/%d/%d", ok, skip, fail):
+		default:
+		}
+	}
+	s.logMu.Unlock()
+}
+
 func (s *Server) handlePage(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Write(s.html)
@@ -101,7 +112,7 @@ func (s *Server) handleDownload(w http.ResponseWriter, r *http.Request) {
 				s.addLog(fmt.Sprintf("--- 翻页: page=%d ---", p))
 				done := make(chan int, 1)
 				go func(pageNum int) {
-					done <- RunDownload(fmt.Sprintf("%d", pageNum), size, s.outputBase, s.addLog, s.notifyTotal, s.notifyProgress)
+					done <- RunDownload(fmt.Sprintf("%d", pageNum), size, s.outputBase, s.addLog, s.notifyTotal, s.notifyProgress, s.notifyStats)
 				}(p)
 				count := <-done
 				if count == 0 {
@@ -112,7 +123,7 @@ func (s *Server) handleDownload(w http.ResponseWriter, r *http.Request) {
 				time.Sleep(2 * time.Second)
 			}
 		} else {
-			RunDownload(page, size, s.outputBase, s.addLog, s.notifyTotal, s.notifyProgress)
+			RunDownload(page, size, s.outputBase, s.addLog, s.notifyTotal, s.notifyProgress, s.notifyStats)
 		}
 	}()
 

@@ -25,7 +25,7 @@ type imageTask struct {
 	path     string
 }
 
-func RunDownload(pageStr, sizeStr, outputBase string, onLog func(string), onTotal func(int), onProgress func(total, current int)) int {
+func RunDownload(pageStr, sizeStr, outputBase string, onLog func(string), onTotal func(int), onProgress func(total, current int), onStats func(ok, skip, fail int)) int {
 	page, size := parseParams(pageStr, sizeStr)
 	onLog(fmt.Sprintf("=== 开始下载: page=%d, size=%d ===", page, size))
 
@@ -107,6 +107,7 @@ func RunDownload(pageStr, sizeStr, outputBase string, onLog func(string), onTota
 			onLog(fmt.Sprintf("[%d/%d] 跳过: %s", i+1, totalImages, task.filename))
 			counts[1]++
 			onProgress(totalImages, i+1)
+			onStats(counts[0], counts[1], counts[2])
 			continue
 		}
 
@@ -120,6 +121,7 @@ func RunDownload(pageStr, sizeStr, outputBase string, onLog func(string), onTota
 				onLog(fmt.Sprintf("[%d/%d] 失败: %s (目录创建失败)", idx+1, totalImages, t.filename))
 				counts[2]++
 				onProgress(totalImages, idx+1)
+				onStats(counts[0], counts[1], counts[2])
 				return
 			}
 
@@ -129,11 +131,13 @@ func RunDownload(pageStr, sizeStr, outputBase string, onLog func(string), onTota
 				onLog(fmt.Sprintf("[%d/%d] 失败: %s (%v)", idx+1, totalImages, t.filename, err))
 				counts[2]++
 				onProgress(totalImages, idx+1)
+				onStats(counts[0], counts[1], counts[2])
 				return
 			}
 			onLog(fmt.Sprintf("[%d/%d] 完成: %s (%.2f MB)", idx+1, totalImages, t.filename, float64(sizeBytes)/1024/1024))
 			counts[0]++
 			onProgress(totalImages, idx+1)
+			onStats(counts[0], counts[1], counts[2])
 		}(i, task)
 	}
 
