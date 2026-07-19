@@ -82,6 +82,17 @@ func (s *Server) notifyStats(ok, skip, fail int) {
 	s.logMu.Unlock()
 }
 
+func (s *Server) notifyEnd() {
+	s.logMu.Lock()
+	for _, ch := range s.logSubs {
+		select {
+		case ch <- "__END__":
+		default:
+		}
+	}
+	s.logMu.Unlock()
+}
+
 func (s *Server) handlePage(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Write(s.html)
@@ -113,6 +124,7 @@ func (s *Server) handleDownload(w http.ResponseWriter, r *http.Request) {
 
 	go func() {
 		defer func() {
+			s.notifyEnd()
 			cancel()
 			s.cancelMu.Lock()
 			s.cancel = nil

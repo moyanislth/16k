@@ -28,7 +28,6 @@
     <label>Page <input type="number" id="page" value="1" min="1"></label>
     <label>Size <input type="number" id="size" value="50" min="1" max="200"></label><br><br>
     <button id="btnCustom" onclick="start('custom')">Start</button>
-    <button id="btnStop" onclick="stop()" style="display:none">Stop</button>
     <div id="progCustom"></div>
 
     <h2>Stats</h2>
@@ -36,6 +35,8 @@
 
     <h2>Log</h2>
     <pre id="log"></pre>
+
+    <button id="btnStop" onclick="stop()" style="display:none">Stop</button>
 
     <script>
         let es, mode = '', total = 0;
@@ -45,13 +46,13 @@
             es = new EventSource('/events');
             es.onmessage = (e) => {
                 const line = e.data;
+                if (line === '__END__') { reset(); return; }
                 if (line.includes('__TOTAL__:')) { total = parseInt(line.split(':')[1]); return; }
                 if (line.includes('__PROGRESS__:')) {
                     const [d, t] = line.split(':')[1].split('/');
                     const pct = t > 0 ? Math.round(d / t * 100) : 0;
                     const id = mode === 'auto' ? 'progAuto' : 'progCustom';
                     document.getElementById(id).textContent = d + '/' + t + ' (' + pct + '%)';
-                    if (d >= t) setTimeout(reset, 1500);
                     return;
                 }
                 if (line.includes('__STAT__:')) {
