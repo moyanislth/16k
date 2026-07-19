@@ -3,6 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <title>16K Downloader</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: ui-monospace, 'Courier New', monospace; font-size: 14px; padding: 20px; line-height: 1.6; }
+        h1 { font-size: 18px; margin-bottom: 16px; }
+        h2 { font-size: 14px; margin: 16px 0 6px; padding-bottom: 3px; border-bottom: 1px solid #ccc; }
+        label { margin-right: 12px; }
+        input { padding: 3px 6px; font-family: inherit; font-size: 13px; border: 1px solid #bbb; border-radius: 3px; }
+        button { padding: 4px 14px; font-family: inherit; font-size: 13px; border: 1px solid #888; border-radius: 3px; background: #f5f5f5; cursor: pointer; }
+        button:hover { background: #e8e8e8; }
+        button:disabled { opacity: 0.4; cursor: default; }
+        #stats { padding: 4px 0; color: #555; }
+        #log { background: #1e1e1e; color: #c8d0c4; padding: 10px; border-radius: 4px; height: 300px; overflow-y: auto; font-size: 12px; line-height: 1.7; white-space: pre-wrap; word-break: break-all; }
+    </style>
 </head>
 <body>
     <h1>16K Downloader</h1>
@@ -12,8 +25,8 @@
     <div id="progAuto"></div>
 
     <h2>Custom</h2>
-    <label>Page <input type="number" id="page" value="1" min="1"></label><br>
-    <label>Size <input type="number" id="size" value="50" min="1" max="200"></label><br>
+    <label>Page <input type="number" id="page" value="1" min="1"></label>
+    <label>Size <input type="number" id="size" value="50" min="1" max="200"></label><br><br>
     <button id="btnCustom" onclick="start('custom')">Start</button>
     <div id="progCustom"></div>
 
@@ -31,10 +44,7 @@
             es = new EventSource('/events');
             es.onmessage = (e) => {
                 const line = e.data;
-                if (line.includes('__TOTAL__:')) {
-                    total = parseInt(line.split(':')[1]);
-                    return;
-                }
+                if (line.includes('__TOTAL__:')) { total = parseInt(line.split(':')[1]); return; }
                 if (line.includes('__PROGRESS__:')) {
                     const [d, t] = line.split(':')[1].split('/');
                     const pct = t > 0 ? Math.round(d / t * 100) : 0;
@@ -45,8 +55,7 @@
                 }
                 if (line.includes('__STAT__:')) {
                     const [ok, skip, fail] = line.split(':')[1].split('/');
-                    document.getElementById('stats').innerHTML =
-                        'OK: ' + ok + ' | Skip: ' + skip + ' | Fail: ' + fail + ' | Total: ' + total;
+                    document.getElementById('stats').textContent = 'OK: ' + ok + ' | Skip: ' + skip + ' | Fail: ' + fail + ' | Total: ' + total;
                     return;
                 }
                 document.getElementById('log').textContent += line + '\n';
