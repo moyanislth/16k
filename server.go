@@ -1,11 +1,12 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
-	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -19,9 +20,15 @@ type Server struct {
 	logMu       sync.RWMutex
 	downloading bool
 	dlMu        sync.Mutex
+	cancel      context.CancelFunc
+	cancelMu    sync.Mutex
 }
 
-func NewServer(output string, html []byte) *Server {
+func NewServer(htmlPath, output string) *Server {
+	html, err := os.ReadFile(htmlPath)
+	if err != nil {
+		log.Fatalf("读取 index.html 失败: %v", err)
+	}
 	s := &Server{outputBase: output, html: html}
 	if err := os.MkdirAll(output, 0755); err != nil {
 		log.Fatalf("创建输出目录失败: %v", err)
@@ -91,6 +98,11 @@ func (s *Server) handleDownload(w http.ResponseWriter, r *http.Request) {
 	s.downloading = true
 	s.dlMu.Unlock()
 
+	ctx, cancel := context.WithCancel(context.Background())
+	s.cancelMu.Lock()
+	s.cancel = cancel
+	s.cancelMu.Unlock()
+
 	mode := r.URL.Query().Get("mode")
 	page := r.URL.Query().Get("page")
 	size := r.URL.Query().Get("size")
@@ -101,6 +113,10 @@ func (s *Server) handleDownload(w http.ResponseWriter, r *http.Request) {
 
 	go func() {
 		defer func() {
+			cancel()
+			s.cancelMu.Lock()
+			s.cancel = nil
+			s.cancelMu.Unlock()
 			s.dlMu.Lock()
 			s.downloading = false
 			s.dlMu.Unlock()
@@ -109,10 +125,14 @@ func (s *Server) handleDownload(w http.ResponseWriter, r *http.Request) {
 		if mode == "auto" {
 			p := 1
 			for {
+				if ctx.Err() != nil {
+					s.addLog("下载已中断")
+					break
+				}
 				s.addLog(fmt.Sprintf("--- 翻页: page=%d ---", p))
 				done := make(chan int, 1)
 				go func(pageNum int) {
-					done <- RunDownload(fmt.Sprintf("%d", pageNum), size, s.outputBase, s.addLog, s.notifyTotal, s.notifyProgress, s.notifyStats)
+					done <- RunDownload(ctx, fmt.Sprintf("%d", pageNum), size, s.outputBase, s.addLog, s.notifyTotal, s.notifyProgress, s.notifyStats)
 				}(p)
 				count := <-done
 				if count == 0 {
@@ -123,12 +143,26 @@ func (s *Server) handleDownload(w http.ResponseWriter, r *http.Request) {
 				time.Sleep(2 * time.Second)
 			}
 		} else {
-			RunDownload(page, size, s.outputBase, s.addLog, s.notifyTotal, s.notifyProgress, s.notifyStats)
+			RunDownload(ctx, page, size, s.outputBase, s.addLog, s.notifyTotal, s.notifyProgress, s.notifyStats)
 		}
 	}()
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"status": "started"})
+}
+
+func (s *Server) handleCancel(w http.ResponseWriter, r *http.Request) {
+	s.cancelMu.Lock()
+	if s.cancel != nil {
+		s.cancel()
+		s.cancel = nil
+		s.cancelMu.Unlock()
+		s.addLog("用户请求中断下载")
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+	s.cancelMu.Unlock()
+	w.WriteHeader(http.StatusConflict)
 }
 
 func (s *Server) removeSub(ch chan string) {

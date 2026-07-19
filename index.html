@@ -28,6 +28,7 @@
     <label>Page <input type="number" id="page" value="1" min="1"></label>
     <label>Size <input type="number" id="size" value="50" min="1" max="200"></label><br><br>
     <button id="btnCustom" onclick="start('custom')">Start</button>
+    <button id="btnStop" onclick="stop()" style="display:none">Stop</button>
     <div id="progCustom"></div>
 
     <h2>Stats</h2>
@@ -66,6 +67,7 @@
         function reset() {
             document.getElementById('btnAuto').disabled = false;
             document.getElementById('btnCustom').disabled = false;
+            document.getElementById('btnStop').style.display = 'none';
             document.getElementById('progAuto').textContent = '';
             document.getElementById('progCustom').textContent = '';
             document.getElementById('stats').textContent = '';
@@ -74,6 +76,7 @@
         function setBtns(on) {
             document.getElementById('btnAuto').disabled = on;
             document.getElementById('btnCustom').disabled = on;
+            document.getElementById('btnStop').style.display = on ? 'inline-block' : 'none';
         }
 
         async function start(m) {
@@ -81,6 +84,11 @@
             mode = m;
             const url = '/download?mode=' + m + (m === 'custom' ? '&page=' + document.getElementById('page').value + '&size=' + document.getElementById('size').value : '');
             try { await fetch(url); } catch(e) { setBtns(false); }
+        }
+
+        async function stop() {
+            try { await fetch('/cancel', { method: 'POST' }); } catch(e) {}
+            setBtns(false);
         }
 
         connect();

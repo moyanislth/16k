@@ -25,7 +25,7 @@ type imageTask struct {
 	path     string
 }
 
-func RunDownload(pageStr, sizeStr, outputBase string, onLog func(string), onTotal func(int), onProgress func(total, current int), onStats func(ok, skip, fail int)) int {
+func RunDownload(ctx context.Context, pageStr, sizeStr, outputBase string, onLog func(string), onTotal func(int), onProgress func(total, current int), onStats func(ok, skip, fail int)) int {
 	page, size := parseParams(pageStr, sizeStr)
 	onLog(fmt.Sprintf("=== 开始下载: page=%d, size=%d ===", page, size))
 
@@ -37,7 +37,7 @@ func RunDownload(pageStr, sizeStr, outputBase string, onLog func(string), onTota
 		chromedp.UserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"),
 	)
 
-	allocCtx, allocCancel := chromedp.NewExecAllocator(context.Background(), opts...)
+	allocCtx, allocCancel := chromedp.NewExecAllocator(ctx, opts...)
 	defer allocCancel()
 
 	scrapeCtx, cancel := chromedp.NewContext(allocCtx)
