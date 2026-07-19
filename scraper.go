@@ -25,7 +25,7 @@ type imageTask struct {
 	path     string
 }
 
-func RunDownload(pageStr, sizeStr string, onLog func(string), onTotal func(int), onProgress func(total, current int)) int {
+func RunDownload(pageStr, sizeStr, outputBase string, onLog func(string), onTotal func(int), onProgress func(total, current int)) int {
 	page, size := parseParams(pageStr, sizeStr)
 	onLog(fmt.Sprintf("=== 开始下载: page=%d, size=%d ===", page, size))
 
@@ -93,7 +93,6 @@ func RunDownload(pageStr, sizeStr string, onLog func(string), onTotal func(int),
 	onTotal(totalImages)
 	onLog(fmt.Sprintf("共 %d 张图片", totalImages))
 
-	outputBase := "D:/Projects/Ai/16k/data/images"
 	os.MkdirAll(outputBase, 0755)
 
 	const maxConc = 8
