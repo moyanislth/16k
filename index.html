@@ -31,7 +31,7 @@
     <div id="progCustom"></div>
 
     <h2>Stats</h2>
-    <div id="stats"></div>
+    <div id="stats">Page - | - / - (-%)<br>Page - | OK: - | Skip: - | Fail: -</div>
 
     <h2>Log</h2>
     <pre id="log"></pre>
@@ -96,7 +96,7 @@
             document.getElementById('progCustom').textContent = '';
             total = 0; current = 0; page = 1;
             statsOk = 0; statsSkip = 0; statsFail = 0;
-            document.getElementById('stats').innerHTML = '';
+            document.getElementById('stats').innerHTML = 'Page - | - / - (-%)<br>Page - | OK: - | Skip: - | Fail: -';
         }
 
         function setBtns(on) {
