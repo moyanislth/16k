@@ -82,6 +82,7 @@
         async function start(m) {
             setBtns(true);
             mode = m;
+            document.getElementById('log').textContent = '';
             const url = '/download?mode=' + m + (m === 'custom' ? '&page=' + document.getElementById('page').value + '&size=' + document.getElementById('size').value : '');
             try { await fetch(url); } catch(e) { setBtns(false); }
         }

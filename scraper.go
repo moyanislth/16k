@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
@@ -105,16 +106,16 @@ func RunDownload(ctx context.Context, pageStr, sizeStr, outputBase string, onLog
 	)
 	var dlWg sync.WaitGroup
 	dlSem := make(chan struct{}, maxConc)
-	var counts [3]int
+	var counts [3]int32
 
 	for i, task := range allImages {
 		task.path = filepath.Join(outputBase, task.postID, task.filename)
 
 		if _, err := os.Stat(task.path); err == nil {
-			onLog(fmt.Sprintf("[%d/%d] 跳过: %s", i+1, totalImages, task.filename))
-			counts[1]++
+			onLog(fmt.Sprintf("[%d/%d] 跳过: %s", i+1, totalImages, t.filename))
+			atomic.AddInt32(&counts[1], 1)
 			onProgress(totalImages, i+1)
-			onStats(counts[0], counts[1], counts[2])
+			onStats(int(atomic.LoadInt32(&counts[0])), int(atomic.LoadInt32(&counts[1])), int(atomic.LoadInt32(&counts[2])))
 			continue
 		}
 
@@ -126,18 +127,18 @@ func RunDownload(ctx context.Context, pageStr, sizeStr, outputBase string, onLog
 
 			if err := os.MkdirAll(filepath.Dir(t.path), 0755); err != nil {
 				onLog(fmt.Sprintf("[%d/%d] 失败: %s (目录创建失败)", idx+1, totalImages, t.filename))
-				counts[2]++
+				atomic.AddInt32(&counts[2], 1)
 				onProgress(totalImages, idx+1)
-				onStats(counts[0], counts[1], counts[2])
+				onStats(int(atomic.LoadInt32(&counts[0])), int(atomic.LoadInt32(&counts[1])), int(atomic.LoadInt32(&counts[2])))
 				return
 			}
 
 			for attempt := 1; attempt <= maxRetry; attempt++ {
 				if ctx.Err() != nil {
 					onLog(fmt.Sprintf("[%d/%d] 中断: %s", idx+1, totalImages, t.filename))
-					counts[2]++
+					atomic.AddInt32(&counts[2], 1)
 					onProgress(totalImages, idx+1)
-					onStats(counts[0], counts[1], counts[2])
+					onStats(int(atomic.LoadInt32(&counts[0])), int(atomic.LoadInt32(&counts[1])), int(atomic.LoadInt32(&counts[2])))
 					return
 				}
 
@@ -145,9 +146,9 @@ func RunDownload(ctx context.Context, pageStr, sizeStr, outputBase string, onLog
 				sizeBytes, err := downloadImage(allocCtx, t.url, t.path)
 				if err == nil {
 					onLog(fmt.Sprintf("[%d/%d] 完成: %s (%.2f MB)", idx+1, totalImages, t.filename, float64(sizeBytes)/1024/1024))
-					counts[0]++
+					atomic.AddInt32(&counts[0], 1)
 					onProgress(totalImages, idx+1)
-					onStats(counts[0], counts[1], counts[2])
+					onStats(int(atomic.LoadInt32(&counts[0])), int(atomic.LoadInt32(&counts[1])), int(atomic.LoadInt32(&counts[2])))
 					return
 				}
 
@@ -158,14 +159,14 @@ func RunDownload(ctx context.Context, pageStr, sizeStr, outputBase string, onLog
 			}
 
 			onLog(fmt.Sprintf("[%d/%d] 失败: %s (已重试 %d 次)", idx+1, totalImages, t.filename, maxRetry))
-			counts[2]++
+			atomic.AddInt32(&counts[2], 1)
 			onProgress(totalImages, idx+1)
-			onStats(counts[0], counts[1], counts[2])
+			onStats(int(atomic.LoadInt32(&counts[0])), int(atomic.LoadInt32(&counts[1])), int(atomic.LoadInt32(&counts[2])))
 		}(i, task)
 	}
 
 	dlWg.Wait()
-	onLog(fmt.Sprintf("=== 完成: 成功%d 跳过%d 失败%d 总计%d ===", counts[0], counts[1], counts[2], totalImages))
+	onLog(fmt.Sprintf("=== 完成: 成功%d 跳过%d 失败%d 总计%d ===", atomic.LoadInt32(&counts[0]), atomic.LoadInt32(&counts[1]), atomic.LoadInt32(&counts[2]), totalImages))
 	return totalImages
 }
 
@@ -190,8 +191,14 @@ func scrapeGridPage(ctx context.Context, page, size int, onLog func(string)) []s
 		return nil
 	}
 
+	gridItems := doc.Find(".grid-item")
+	onLog(fmt.Sprintf("找到 %d 个 .grid-item", gridItems.Length()))
+	if gridItems.Length() == 0 {
+		onLog("提示: 未找到 .grid-item，页面结构可能已变更")
+	}
+
 	var urls []string
-	doc.Find(".grid-item").Each(func(i int, s *goquery.Selection) {
+	gridItems.Each(func(i int, s *goquery.Selection) {
 		link := s.Find("a").First()
 		href, exists := link.Attr("href")
 		if exists && strings.Contains(href, "/post/") {
