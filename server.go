@@ -150,6 +150,7 @@ func (s *Server) handleDownload(w http.ResponseWriter, r *http.Request) {
 				for attempt := 1; attempt <= 3; attempt++ {
 					if attempt > 1 {
 						s.addLog(fmt.Sprintf("重试翻页: page=%d (尝试 %d/3)", p, attempt))
+						time.Sleep(1500 * time.Millisecond)
 					}
 					done := make(chan int, 1)
 					go func(pageNum int) {
