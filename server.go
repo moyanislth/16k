@@ -71,11 +71,11 @@ func (s *Server) notifyProgress(total, current int) {
 	s.logMu.Unlock()
 }
 
-func (s *Server) notifyStats(ok, skip, fail int) {
+func (s *Server) notifyStats(page, ok, skip, fail int) {
 	s.logMu.Lock()
 	for _, ch := range s.logSubs {
 		select {
-		case ch <- fmt.Sprintf("__STAT__:%d/%d/%d", ok, skip, fail):
+		case ch <- fmt.Sprintf("__STAT__:%d/%d/%d/%d", page, ok, skip, fail):
 		default:
 		}
 	}

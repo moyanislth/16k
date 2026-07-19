@@ -38,7 +38,7 @@
 	<button id="btnStop" onclick="stop()" style="display:none; margin-top: 2px;">Stop</button>
 
     <script>
-        let es, mode = '', total = 0;
+        let es, mode = '', total = 0, current = 0, page = 1, statsOk = 0, statsSkip = 0, statsFail = 0;
 
         function connect() {
             if (es) es.close();
@@ -46,23 +46,47 @@
             es.onmessage = (e) => {
                 const line = e.data;
                 if (line === '__END__') { reset(); return; }
-                if (line.includes('__TOTAL__:')) { total = parseInt(line.split(':')[1]); return; }
+                if (line.includes('__TOTAL__:')) {
+                    total = parseInt(line.split(':')[1]);
+                    updateStats();
+                    return;
+                }
                 if (line.includes('__PROGRESS__:')) {
                     const [d, t] = line.split(':')[1].split('/');
-                    const pct = t > 0 ? Math.round(d / t * 100) : 0;
-                    const id = mode === 'auto' ? 'progAuto' : 'progCustom';
-                    document.getElementById(id).textContent = d + '/' + t + ' (' + pct + '%)';
+                    current = parseInt(d);
+                    updateStats();
                     return;
                 }
                 if (line.includes('__STAT__:')) {
-                    const [ok, skip, fail] = line.split(':')[1].split('/');
-                    document.getElementById('stats').textContent = 'OK: ' + ok + ' | Skip: ' + skip + ' | Fail: ' + fail + ' | Total: ' + total;
+                    const parts = line.split(':')[1].split('/');
+                    page = parseInt(parts[0]);
+                    statsOk = parseInt(parts[1]);
+                    statsSkip = parseInt(parts[2]);
+                    statsFail = parseInt(parts[3]);
+                    updateStats();
                     return;
                 }
-                document.getElementById('log').textContent += line + '\n';
+                const log = document.getElementById('log');
+                log.textContent += line + '\n';
+                if (autoScroll) log.scrollTop = log.scrollHeight;
             };
             es.onerror = () => setTimeout(connect, 2000);
         }
+
+        function updateStats() {
+            const pct = total > 0 ? Math.round(current / total * 100) : 0;
+            document.getElementById('stats').innerHTML =
+                'Page ' + page + ' | ' + current + '/' + total + ' (' + pct + '%)<br>' +
+                'Page ' + page + ' | OK: ' + statsOk + ' | Skip: ' + statsSkip + ' | Fail: ' + statsFail;
+        }
+
+        let autoScroll = true;
+        (function() {
+            const log = document.getElementById('log');
+            log.addEventListener('scroll', () => {
+                autoScroll = (log.scrollTop + log.clientHeight >= log.scrollHeight - 2);
+            });
+        })();
 
         function reset() {
             document.getElementById('btnAuto').disabled = false;
@@ -70,7 +94,9 @@
             document.getElementById('btnStop').style.display = 'none';
             document.getElementById('progAuto').textContent = '';
             document.getElementById('progCustom').textContent = '';
-            document.getElementById('stats').textContent = '';
+            total = 0; current = 0; page = 1;
+            statsOk = 0; statsSkip = 0; statsFail = 0;
+            document.getElementById('stats').innerHTML = '';
         }
 
         function setBtns(on) {

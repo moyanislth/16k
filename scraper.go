@@ -30,7 +30,7 @@ type imageTask struct {
 	path     string
 }
 
-func RunDownload(ctx context.Context, pageStr, sizeStr, outputBase string, onLog func(string), onTotal func(int), onProgress func(total, current int), onStats func(ok, skip, fail int)) int {
+func RunDownload(ctx context.Context, pageStr, sizeStr, outputBase string, onLog func(string), onTotal func(int), onProgress func(total, current int), onStats func(page, ok, skip, fail int)) int {
 	page, size := parseParams(pageStr, sizeStr)
 	onLog(fmt.Sprintf("=== 开始下载: page=%d, size=%d ===", page, size))
 
@@ -107,6 +107,7 @@ func RunDownload(ctx context.Context, pageStr, sizeStr, outputBase string, onLog
 	var dlWg sync.WaitGroup
 	dlSem := make(chan struct{}, maxConc)
 	var counts [3]int32
+	var progress int32
 
 	for i, task := range allImages {
 		task.path = filepath.Join(outputBase, task.postID, task.filename)
@@ -114,8 +115,9 @@ func RunDownload(ctx context.Context, pageStr, sizeStr, outputBase string, onLog
 		if _, err := os.Stat(task.path); err == nil {
 			onLog(fmt.Sprintf("[%d/%d] 跳过: %s", i+1, totalImages, task.filename))
 			atomic.AddInt32(&counts[1], 1)
-			onProgress(totalImages, i+1)
-			onStats(int(atomic.LoadInt32(&counts[0])), int(atomic.LoadInt32(&counts[1])), int(atomic.LoadInt32(&counts[2])))
+			cur := atomic.AddInt32(&progress, 1)
+			onProgress(totalImages, int(cur))
+			onStats(page, int(atomic.LoadInt32(&counts[0])), int(atomic.LoadInt32(&counts[1])), int(atomic.LoadInt32(&counts[2])))
 			continue
 		}
 
@@ -128,8 +130,9 @@ func RunDownload(ctx context.Context, pageStr, sizeStr, outputBase string, onLog
 			if err := os.MkdirAll(filepath.Dir(t.path), 0755); err != nil {
 				onLog(fmt.Sprintf("[%d/%d] 失败: %s (目录创建失败)", idx+1, totalImages, t.filename))
 				atomic.AddInt32(&counts[2], 1)
-				onProgress(totalImages, idx+1)
-				onStats(int(atomic.LoadInt32(&counts[0])), int(atomic.LoadInt32(&counts[1])), int(atomic.LoadInt32(&counts[2])))
+				cur := atomic.AddInt32(&progress, 1)
+				onProgress(totalImages, int(cur))
+				onStats(page, int(atomic.LoadInt32(&counts[0])), int(atomic.LoadInt32(&counts[1])), int(atomic.LoadInt32(&counts[2])))
 				return
 			}
 
@@ -137,8 +140,9 @@ func RunDownload(ctx context.Context, pageStr, sizeStr, outputBase string, onLog
 				if ctx.Err() != nil {
 					onLog(fmt.Sprintf("[%d/%d] 中断: %s", idx+1, totalImages, t.filename))
 					atomic.AddInt32(&counts[2], 1)
-					onProgress(totalImages, idx+1)
-					onStats(int(atomic.LoadInt32(&counts[0])), int(atomic.LoadInt32(&counts[1])), int(atomic.LoadInt32(&counts[2])))
+					cur := atomic.AddInt32(&progress, 1)
+					onProgress(totalImages, int(cur))
+					onStats(page, int(atomic.LoadInt32(&counts[0])), int(atomic.LoadInt32(&counts[1])), int(atomic.LoadInt32(&counts[2])))
 					return
 				}
 
@@ -147,8 +151,9 @@ func RunDownload(ctx context.Context, pageStr, sizeStr, outputBase string, onLog
 				if err == nil {
 					onLog(fmt.Sprintf("[%d/%d] 完成: %s (%.2f MB)", idx+1, totalImages, t.filename, float64(sizeBytes)/1024/1024))
 					atomic.AddInt32(&counts[0], 1)
-					onProgress(totalImages, idx+1)
-					onStats(int(atomic.LoadInt32(&counts[0])), int(atomic.LoadInt32(&counts[1])), int(atomic.LoadInt32(&counts[2])))
+					cur := atomic.AddInt32(&progress, 1)
+					onProgress(totalImages, int(cur))
+					onStats(page, int(atomic.LoadInt32(&counts[0])), int(atomic.LoadInt32(&counts[1])), int(atomic.LoadInt32(&counts[2])))
 					return
 				}
 
@@ -160,8 +165,9 @@ func RunDownload(ctx context.Context, pageStr, sizeStr, outputBase string, onLog
 
 			onLog(fmt.Sprintf("[%d/%d] 失败: %s (已重试 %d 次)", idx+1, totalImages, t.filename, maxRetry))
 			atomic.AddInt32(&counts[2], 1)
-			onProgress(totalImages, idx+1)
-			onStats(int(atomic.LoadInt32(&counts[0])), int(atomic.LoadInt32(&counts[1])), int(atomic.LoadInt32(&counts[2])))
+			cur := atomic.AddInt32(&progress, 1)
+			onProgress(totalImages, int(cur))
+			onStats(page, int(atomic.LoadInt32(&counts[0])), int(atomic.LoadInt32(&counts[1])), int(atomic.LoadInt32(&counts[2])))
 		}(i, task)
 	}
 
