@@ -16,7 +16,11 @@ import (
 	"github.com/chromedp/cdproto/network"
 )
 
-var tabCreateMu sync.Mutex
+var (
+	tabCreateMu sync.Mutex
+	baseURL     = "https://16k.club"
+	imgDomain   = "img.16k.club"
+)
 
 type imageTask struct {
 	url      string
@@ -147,7 +151,7 @@ func RunDownload(ctx context.Context, pageStr, sizeStr, outputBase string, onLog
 }
 
 func scrapeGridPage(ctx context.Context, page, size int, onLog func(string)) []string {
-	pageURL := fmt.Sprintf("https://16k.club/index.php?p=%d&size=%d", page, size)
+	pageURL := fmt.Sprintf("%s/index.php?p=%d&size=%d", baseURL, page, size)
 	onLog("访问: " + pageURL)
 
 	var html string
@@ -172,7 +176,7 @@ func scrapeGridPage(ctx context.Context, page, size int, onLog func(string)) []s
 		link := s.Find("a").First()
 		href, exists := link.Attr("href")
 		if exists && strings.Contains(href, "/post/") {
-			fullURL := resolveURL("https://16k.club", href)
+			fullURL := resolveURL(baseURL, href)
 			urls = append(urls, fullURL)
 		}
 	})
@@ -208,7 +212,7 @@ func scrapePostPage(allocCtx context.Context, postURL string, onLog func(string)
 	var urls []string
 	doc.Find("img").Each(func(i int, s *goquery.Selection) {
 		src, _ := s.Attr("src")
-		if strings.Contains(src, "img.16k.club") {
+		if strings.Contains(src, imgDomain) {
 			urls = append(urls, src)
 		}
 	})
